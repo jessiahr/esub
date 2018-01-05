@@ -13,22 +13,23 @@ defmodule Esub.EventDispatcher do
 		{:ok, %Esub.EventDispatcher{bindings: %{}}}
 	end
 
-	def route_event(event) do
-	    GenServer.call(__MODULE__, {:route_event, event})
+	def route_event(channel, event) do
+	   GenServer.call(__MODULE__, {:route_event, channel, event})
 	end
 
-	def handle_call({:route_event, event}, _from, state) do
-		for {pid, filter} <- state.bindings do
+	def handle_call({:route_event, target_channel, event}, _from, state = %Esub.EventDispatcher{bindings: bindings}) do
+		channel = bindings[target_channel]
+		for {pid, filter} <- channel do
 			if filter.(event) do
-				send pid, {:new_event, event}
+				send pid, {:new_event, target_channel, event}
 			end
 		end
     {:reply, state, state}
 	end
 
 
-	def subscribe(filter) do
-    GenServer.call(__MODULE__, {:subscribe, filter})
+	def subscribe(channel, filter) do
+    GenServer.call(__MODULE__, {:subscribe, channel, filter})
 	end
 
 	def kill do
@@ -39,8 +40,14 @@ defmodule Esub.EventDispatcher do
 		Process.exit(self(), :kill)
 	end
 
-	def handle_call({:subscribe, filters}, {from, _ref}, state = %Esub.EventDispatcher{bindings: bindings}) do
-		new_bindings = Map.put(bindings, from, filters)
+	def handle_call({:subscribe, channel, filters}, {from, _ref}, state = %Esub.EventDispatcher{bindings: bindings}) do
+		new_bindings = if bindings[channel] == nil do
+			put_in(bindings, [channel], %{})
+		else
+			bindings
+		end
+	
+		|> put_in([channel, from], filters)
 		new_state = state
 		|> Map.put(:bindings, new_bindings)
     {:reply, new_state, new_state}
