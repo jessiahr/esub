@@ -1,8 +1,8 @@
 defmodule Esub do
   @moduledoc false
   use Application
-  defdelegate broadcast(event), to: Esub.Dsl
-  defdelegate subscribe(filter), to: Esub.Dsl
+  defdelegate broadcast(channel, event), to: Esub.Dsl
+  defdelegate subscribe(channel, filter), to: Esub.Dsl
 
   def start(_type, _args) do
     import Supervisor.Spec, warn: false

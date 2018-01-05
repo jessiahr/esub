@@ -9,7 +9,13 @@ defmodule EsubTest do
   test "sets subscription filter for a module" do
   	filter = fn(_) -> true	end
     this_pid = self()
-  	%Esub.EventDispatcher{bindings: %{^this_pid => func}} = Esub.EventDispatcher.subscribe(filter)
+  	%Esub.EventDispatcher{
+      bindings: %{
+        test_channel: %{
+          ^this_pid => func
+        }
+      }
+    } = Esub.EventDispatcher.subscribe(:test_channel, filter)
   	assert is_function(func)
   end
 
@@ -19,27 +25,27 @@ defmodule EsubTest do
   		send this_pid, {:fillter_called, event}
   		true	
   	end
-  	Esub.EventDispatcher.subscribe(filter)
-  	Esub.EventDispatcher.route_event(%{test: 1})
+  	Esub.EventDispatcher.subscribe(:test_channel, filter)
+  	Esub.EventDispatcher.route_event(:test_channel, %{test: 1})
   	assert_receive {:fillter_called, %{test: 1}}
   end
 
   test "pid is sent events once subscription is added" do 
-    filter = fn(event) ->
+    filter = fn(_) ->
       true  
     end
-    Esub.EventDispatcher.subscribe(filter)
-    Esub.EventDispatcher.route_event(%{test: 1})
-    assert_receive {:new_event, %{test: 1}}
+    Esub.EventDispatcher.subscribe(:test_channel, filter)
+    Esub.EventDispatcher.route_event(:test_channel, %{test: 1})
+    assert_receive {:new_event, :test_channel, %{test: 1}}
   end
 
 
   test "fails gracefully when pid dies before message is recieved" do 
-    filter = fn(event) ->
+    filter = fn(_) ->
       true  
     end
     listener = spawn fn -> 
-      Esub.EventDispatcher.subscribe(filter)
+      Esub.EventDispatcher.subscribe(:test_event, filter)
       receive do
         event -> IO.inspect(event)
       end
@@ -47,6 +53,6 @@ defmodule EsubTest do
     end
     Process.exit(listener, :kill)
     assert !Process.alive?(listener)
-    Esub.EventDispatcher.route_event(%{test: 1})
+    Esub.EventDispatcher.route_event(:test_channel, %{test: 1})
   end
 end

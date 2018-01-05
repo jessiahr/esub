@@ -1,9 +1,9 @@
 defmodule Esub.Dsl do
-	def broadcast(event) do
-    Esub.EventDispatcher.route_event(event)
+	def broadcast(channel, event) do
+    Esub.EventDispatcher.route_event(channel, event)
 	end
 
-	def subscribe(filter) do
-		Esub.EventDispatcher.route_event(filter)
+	def subscribe(channel, filter) do
+		Esub.EventDispatcher.subscribe(channel, filter)
 	end
 end
